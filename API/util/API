@@ -1,0 +1,132 @@
+const express = require("express");
+const WebSocket = require("ws");
+const Router = new express.Router();
+const { convertArrayToCSV } = require("convert-array-to-csv");
+const ss = require("simple-statistics");
+const fs = require("fs");
+
+// const Router = new express.Router()
+const socket = new WebSocket(
+  "wss://ws.finnhub.io?token=cneqofhr01qq13fnumdgcneqofhr01qq13fnume0"
+);
+
+// Connection opened -> Subscribe
+
+socket.addEventListener("open", function (event) {
+  socket.send(JSON.stringify({'type':'subscribe', 'symbol': 'AAPL'}))
+
+  socket.send(JSON.stringify({ type: "subscribe", symbol: "BINANCE:BTCUSDT" }));
+});
+
+let sName;
+let price;
+let globeValLow = 0;
+var globeValCurr;
+let globeValHigh = 0;
+let filename;
+let stock1Prices=[];
+let stock1Returns=[]
+let newData=[];
+let returnPercentage;
+let status;
+
+
+
+console.log(globeValCurr);
+
+socket.addEventListener("message", function (event) {
+    try {
+      parsedData = JSON.parse(event.data);
+      if (parsedData && parsedData.data && parsedData.data.length > 0) {
+        price = parsedData.data[0].p;
+        sName = parsedData.data[0].s;
+        globeValCurr = price;
+
+        // Update lowest value if necessary
+
+        if (globeValLow === 0 || globeValCurr < globeValLow) {
+          globeValLow = globeValCurr;
+        }
+
+        // Update highest value if necessary
+        if (globeValCurr > globeValHigh) {
+          globeValHigh = globeValCurr;
+        }
+    
+      } else {
+        // console.error("JSON data is not in the expected format or is empty.");
+      }
+    } catch (e) {
+      console.error("Error parsing JSON data: ", e);
+    }
+
+
+
+});
+socket.addEventListener("message", function (event) {
+  newData.push([sName, price, returnPercentage, status ])
+
+  const header = ["Name","Price", "P-value", "status"]
+  const csvFromArrayofArrays = convertArrayToCSV(newData,{
+    header,
+    separator:','
+  })
+  fs.writeFile('StockData.csv', csvFromArrayofArrays, err=>{
+    if(err){
+      console.log(err)
+    }
+    
+  })
+
+// filename = "StockData.csv";
+// const newData = [];
+// stock1Prices.push(globeValCurr)
+
+
+// newData.push([globeValCurr]);
+// const appendToCSV = (filename, newData) => {
+//   // Read existing content of the file
+//   fs.readFile(filename, "utf8", (err, data) => {
+//     if (err) {
+//       console.error("Error reading file:", err);
+//       return;
+//     }
+//     // stock1Prices = [Number(data)]
+
+//     // Append new data and add a new line
+//     const updatedContent = data + newData.join(",") + "\n";
+
+//     // Write the updated content back to the file
+//     fs.writeFile(filename, updatedContent, "utf8", (err) => {
+//       if (err) {
+//         console.error("Error writing to file:", err);
+//       }
+//       // console.log("Data appended to file successfully.");
+//     });
+//   });
+// };
+// appendToCSV(filename, newData);
+})
+
+
+socket.addEventListener("message", function (event) {
+  stock1Prices.push(price)
+for (let i = 1; i < stock1Prices.length; i++) {
+  const prevPrice = stock1Prices[i - 1];
+  // console.log(typeof(stock1Prices[i]))  
+  const currentPrice = stock1Prices[i];
+  returnPercentage = ((currentPrice - prevPrice) / prevPrice) * 100;
+  stock1Returns.push(returnPercentage);
+  if(returnPercentage<0.05){
+    status = "good to buy"
+  }else{
+    status = "don't buy"
+  }
+}
+})
+
+console.log(globeValCurr);
+var unsubscribe = function (symbol) {
+  socket.send(JSON.stringify({ type: "unsubscribe", symbol: symbol }));
+};
+module.exports = Router;

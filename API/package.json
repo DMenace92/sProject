@@ -1,0 +1,21 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "stock app",
+  "main": "server.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "author": "Dennis A, Enwiya",
+  "license": "ISC",
+  "dependencies": {
+    "convert-array-to-csv": "^2.0.0",
+    "express": "^4.18.2",
+    "finnhub": "^1.2.18",
+    "mongo": "^0.1.0",
+    "mongoose": "^8.2.0",
+    "nodemon": "^3.1.0",
+    "simple-statistics": "^7.8.3",
+    "wss": "^3.3.4"
+  }
+}
